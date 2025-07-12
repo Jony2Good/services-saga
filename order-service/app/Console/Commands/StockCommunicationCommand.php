@@ -5,24 +5,24 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
-use App\Service\NotificationService;
+use Illuminate\Support\Facades\Log;
 use App\Service\StockCommunicationService;
 
-class OrderPaymentHandlerCommand extends Command
+class StockCommunicationCommand extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'app:payment-event';
+    protected $signature = 'app:order-event';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Обработка запроса от order-service';
+    protected $description = 'Слушаем очередь для получения сообщения из stock-service';
 
     /**
      * Execute the console command.
@@ -37,25 +37,17 @@ class OrderPaymentHandlerCommand extends Command
         );
 
         $channel = $connection->channel();
-        $channel->queue_declare('billing_request', false, false, false, false);
+        $channel->queue_declare('stock_request', false, false, false, false);
         $channel->basic_qos(0, 1, null);
-        $billingSaga = app(\App\Service\BillingSagaService::class);
+     
 
-        $channel->basic_consume('billing_request', '', false, false, false, false, function ($req) use ($channel, $billingSaga) {
-            $body = json_decode($req->body, true);
-            $totalPrice = (string)$body['total_price'];
-            $orderId = $body['order_id'];
-            $userId = $body['user_id'];
+        $channel->basic_consume('stock_request', '', false, false, false, false, function ($req) use ($channel) {
+            $body = json_decode($req->body, true);            
+           
+            $reply = StockCommunicationService::handle($body['user_id'], $body['order_id']);  
 
-            $reply = $billingSaga->startOrderSaga($userId, $orderId, $totalPrice);
-
-            NotificationService::notificationMessage($reply);
-
-            if ($reply['error'] === false) {
-                // Отправляем запрос в stock-service
-                StockCommunicationService::handle($reply);
-            }
-
+             Log::info('ответ', [1 => print_r($reply, true)]);
+        
             // Формируем ответ
             $msg = new AMQPMessage(json_encode($reply), [
                 'correlation_id' => $req->get('correlation_id'),
@@ -70,7 +62,7 @@ class OrderPaymentHandlerCommand extends Command
         });
 
         // Пишем в консоль, чтобы не зависнуть без уведомления
-        $this->info('Ожидаем запрос в billing-service...');
+        $this->info('Ожидаем запрос в order-service...');
 
         while ($channel->is_consuming()) {
             $channel->wait();

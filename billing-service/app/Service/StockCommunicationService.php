@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Events;
+namespace App\Service;
 
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
-class StockAskEvent 
+class StockCommunicationService
 {
     public static function handle(array $payload): void
     {
@@ -24,7 +24,7 @@ class StockAskEvent
         $channel->exchange_declare($exchange, 'topic', false, true, false);
 
         $event = [
-            'event' => 'OrderStocked',
+            'event' => 'OrderStockRequest',
             'version' => '1.0',
             'data' => $payload,
         ];

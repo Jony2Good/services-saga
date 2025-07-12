@@ -1,0 +1,75 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+    container_name: ${APP_NAME}-nginx
+    restart: unless-stopped
+    image: atrem2023/app-nginx:amd64
+    ports:
+      - "${APP_WEB_PORT:-8081}:80"
+    volumes:
+      - ./:${APP_PATH}
+    environment:
+      APP_PATH: ${APP_PATH}
+    depends_on:
+      - php
+    networks:
+      - app
+
+  php:
+    build:
+      args:
+        uid: 1000
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    container_name: ${APP_NAME}-php
+    restart: unless-stopped
+    image: atrem2023/notification-service:amd64
+    volumes:
+      - ./tmp/logs:/var/log
+    depends_on:
+      - db
+    networks:
+      - app
+
+  db:
+    image: postgres:15-alpine
+    container_name: ${APP_NAME}-db
+    restart: unless-stopped
+    volumes:
+      - ./tmp/postgresql/data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: '${DB_DATABASE}'
+      POSTGRES_USER: '${DB_USERNAME}'
+      POSTGRES_PASSWORD: '${DB_PASSWORD}'
+    networks:
+      - app
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5   
+
+  notification-event:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+      args:
+        uid: 1000
+    container_name: ${APP_NAME}-notification-event
+    restart: unless-stopped
+    command: php artisan app:notification-event
+    volumes:
+      - ./tmp/logs:/var/log
+    depends_on:  
+      - db
+    networks:
+      - app
+ 
+networks:
+  app:
+    external: true
+    name: shared-network

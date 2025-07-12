@@ -5,24 +5,25 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
-use App\Jobs\UserRegisteredJob;
 use Illuminate\Support\Facades\Log;
+use App\Service\OrderCommunicationService;
+use App\Service\BillingCommunicationService;
 
-class ListenAuthQueue extends Command
+class BillingCommunicationCommand extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'app:registry-event';
+    protected $signature = 'app:stok-event';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Событие регистрации пользователя - создание аккаунта';
+    protected $description = 'Слушаем очередь для получения сообщения из billing-service';
 
     /**
      * Execute the console command.
@@ -40,7 +41,7 @@ class ListenAuthQueue extends Command
 
         $queue = 'billing_queue';
         $exchange = 'events';
-        $routingKey = 'user.registered';
+        $routingKey = 'order.stocked';
 
         $channel->exchange_declare($exchange,'topic',false,true,false);
 
@@ -51,8 +52,16 @@ class ListenAuthQueue extends Command
             try {
                 $event = json_decode($msg->getBody(), true);               
                
-                if ($event['event'] === 'UserRegistered') {
-                   UserRegisteredJob::dispatch($event['data']);
+                if ($event['event'] === 'OrderStockRequest') {
+                    
+                    // запрашиваем order-service для получения состава заказа
+                    $payload = OrderCommunicationService::handle($event['data']);
+
+                    //направляем ответ в billing-service о резерве товара
+                    BillingCommunicationService::handle($payload);
+
+                    Log::info('ответ', [1 => print_r($payload, true)]);
+                 
                 }
 
                 $channel->basic_ack($msg->getDeliveryTag());
@@ -62,6 +71,8 @@ class ListenAuthQueue extends Command
             }
         };
         $channel->basic_consume($queue, '', false, false, false, false, $callback);
+
+         $this->info('Ожидаем запрос в stock-service...');
 
         while ($channel->is_consuming()) {
             $channel->wait();

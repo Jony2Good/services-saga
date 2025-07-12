@@ -21,5 +21,5 @@ Route::get('/ready', function (Request $request) {
 Route::prefix('v1')->group(function() {
     Route::get('dishes', DishController::class);
     Route::apiResource('orders', OrderController::class);
-    Route::get('payments/{id}', OrderPaymentController::class);
+    Route::get('payments/{id}', OrderPaymentController::class); 
 });

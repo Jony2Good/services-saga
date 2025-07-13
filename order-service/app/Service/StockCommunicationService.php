@@ -8,7 +8,6 @@ class StockCommunicationService
 {
     public static function handle(int $userId, int $orderId)
     {
-
         $order = Order::where('user_id', $userId)
             ->where('id', $orderId)
             ->with(['orderDishes'])

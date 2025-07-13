@@ -7,6 +7,7 @@ use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use App\Service\NotificationService;
 use App\Service\StockCommunicationService;
+use Illuminate\Support\Facades\Log;
 
 class OrderPaymentHandlerCommand extends Command
 {
@@ -39,6 +40,7 @@ class OrderPaymentHandlerCommand extends Command
         $channel = $connection->channel();
         $channel->queue_declare('billing_request', false, false, false, false);
         $channel->basic_qos(0, 1, null);
+        
         $billingSaga = app(\App\Service\BillingSagaService::class);
 
         $channel->basic_consume('billing_request', '', false, false, false, false, function ($req) use ($channel, $billingSaga) {
@@ -49,9 +51,12 @@ class OrderPaymentHandlerCommand extends Command
 
             $reply = $billingSaga->startOrderSaga($userId, $orderId, $totalPrice);
 
+            Log::info('ответ1', [1 => print_r($reply, true)]);
+
             NotificationService::notificationMessage($reply);
 
             if ($reply['error'] === false) {
+                Log::info('ответ2', [1 => print_r($reply, true)]);
                 // Отправляем запрос в stock-service
                 StockCommunicationService::handle($reply);
             }

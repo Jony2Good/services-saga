@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
         // ]);
 
          $this->call([           
-            DishSeeder::class,           
+            StockAmountDishSeeder::class,           
         ]);
     }
 }

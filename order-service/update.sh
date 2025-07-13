@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 php artisan migrate --force
+php artisan db:seed
 php artisan route:clear
 php artisan route:cache
 php artisan cache:clear

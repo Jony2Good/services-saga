@@ -7,7 +7,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 class StockCommunicationService
 {
-    public static function handle(array $payload): void
+    public static function handle(array $payload, string $event = 'OrderStockRequest'): void
     {
         $connection = new AMQPStreamConnection(
             config('queue.connections.rabbitmq.hosts.0.host'),
@@ -24,7 +24,7 @@ class StockCommunicationService
         $channel->exchange_declare($exchange, 'topic', false, true, false);
 
         $event = [
-            'event' => 'OrderStockRequest',
+            'event' => $event,
             'version' => '1.0',
             'data' => $payload,
         ];

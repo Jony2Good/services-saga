@@ -42,7 +42,8 @@ class StockCommunicationCommand extends Command
      
 
         $channel->basic_consume('stock_request', '', false, false, false, false, function ($req) use ($channel) {
-            $body = json_decode($req->body, true);            
+            $body = json_decode($req->body, true);   
+             Log::info('ответ', [1 => print_r( $body, true)]);         
            
             $reply = StockCommunicationService::handle($body['user_id'], $body['order_id']);  
 

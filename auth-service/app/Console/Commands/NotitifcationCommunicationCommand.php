@@ -37,7 +37,7 @@ class NotitifcationCommunicationCommand extends Command
 
         $channel = $connection->channel();
         $channel->queue_declare('notification_request', false, false, false, false);
-        $channel->basic_qos(null, 1, null);
+        $channel->basic_qos(0, 1, null);
        
 
         $channel->basic_consume('notification_request', '', false, false, false, false, function ($req) use ($channel) {

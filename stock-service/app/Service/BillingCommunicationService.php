@@ -10,6 +10,9 @@ class BillingCommunicationService
     public static function confirmed(?array $payload, array $data): void   
     {
         $answer = StockService::stocked($payload, $data);
+
+        \Log::info('55555', ['answer' => print_r($answer, true)]);
+
         self::publish($answer);  
     }
 
@@ -39,12 +42,16 @@ class BillingCommunicationService
             'data' => $payload,
         ];
 
-        $message = new AMQPMessage(json_encode($eventBody), [
+        $message = json_encode($eventBody);
+
+        \Log::info('Что уходит из stock-service в billing-service', ['answer' => print_r($message, true)]);
+
+        $msg = new AMQPMessage( $message, [
             'content_type' => 'application/json',
             'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT
         ]);
 
-        $channel->basic_publish($message, $exchange, $routingKey);
+        $channel->basic_publish($msg, $exchange, $routingKey);
 
         $channel->close();
         $connection->close();

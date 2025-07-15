@@ -17,7 +17,7 @@ class ListenDeliveryQueue extends Command
      *
      * @var string
      */
-    protected $signature = 'app:listen-delivery-queue';
+    protected $signature = 'app:delivery-event';
 
     /**
      * The console command description.
@@ -54,7 +54,7 @@ class ListenDeliveryQueue extends Command
             try {
                 $event = json_decode($msg->getBody(), true);
 
-                Log::info("ответ из delivery", [1 => print_r($event, true)]);
+                Log::info("ответ из delivery", ['reply' => print_r($event, true)]);
 
                 switch ($event['event']) {
                     case 'OrderDeliverySuccess':
@@ -74,7 +74,7 @@ class ListenDeliveryQueue extends Command
 
                 $channel->basic_ack($msg->getDeliveryTag());
             } catch (\Throwable $e) {
-                Log::error('Ошибка обработки stock-события: ' . $e->getMessage());
+                Log::error('Ошибка обработки delivery-события: ' . $e->getMessage());
                 $channel->basic_nack($msg->getDeliveryTag(), false, false);
             }
         };

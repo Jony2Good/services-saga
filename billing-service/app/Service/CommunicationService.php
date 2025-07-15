@@ -23,13 +23,13 @@ class CommunicationService
 
         $channel->exchange_declare($exchange, 'topic', false, true, false);
 
-        $event = [
+        $eventBody = [
             'event' => $event,
             'version' => '1.0',
             'data' => $payload,
         ];
 
-        $message = json_encode($event);
+        $message = json_encode($eventBody);
 
         $msg = new AMQPMessage($message, [
             'content_type' => 'application/json',

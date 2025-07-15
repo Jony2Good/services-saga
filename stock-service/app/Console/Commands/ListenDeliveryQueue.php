@@ -16,7 +16,7 @@ class ListenDeliveryQueue extends Command
      *
      * @var string
      */
-    protected $signature = 'app:delivery-listen';
+    protected $signature = 'app:delivery-event';
 
     /**
      * The console command description.

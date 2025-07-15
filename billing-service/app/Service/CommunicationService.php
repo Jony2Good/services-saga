@@ -5,9 +5,9 @@ namespace App\Service;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
-class StockCommunicationService
+class CommunicationService
 {
-    public static function handle(array $payload, string $event = 'OrderStockRequest'): void
+    public static function handle(array $payload, string $event, string $key): void
     {
         $connection = new AMQPStreamConnection(
             config('queue.connections.rabbitmq.hosts.0.host'),
@@ -19,7 +19,7 @@ class StockCommunicationService
         $channel = $connection->channel();
 
         $exchange = 'events';
-        $routingKey = 'order.stocked';
+        $routingKey = $key;
 
         $channel->exchange_declare($exchange, 'topic', false, true, false);
 

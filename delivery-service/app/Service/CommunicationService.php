@@ -5,21 +5,9 @@ namespace App\Service;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
-class BillingCommunicationService
+class CommunicationService
 {
-    public static function confirmed(?array $payload, array $data): void   
-    {
-        $answer = StockService::stocked($payload, $data);
-        self::publish($answer);  
-    }
-
-    public static function aborted(?array $payload): void
-    {
-        $answer = StockService::cancel($payload);
-        self::publish($answer, "stock.aborted", "OrderStockAborted");
-    }
-
-     public static function publish(array $payload, string $routingKey = 'stock.confirmed', string $event = 'OrderStockConfirmed')
+    public static function handle(array $payload, string $event, string $key): void
     {
         $connection = new AMQPStreamConnection(
             config('queue.connections.rabbitmq.hosts.0.host'),
@@ -31,21 +19,25 @@ class BillingCommunicationService
         $channel = $connection->channel();
 
         $exchange = 'events';
+        $routingKey = $key;
+
         $channel->exchange_declare($exchange, 'topic', false, true, false);
 
-        $eventBody = [
+        $event = [
             'event' => $event,
             'version' => '1.0',
             'data' => $payload,
         ];
 
-        $message = new AMQPMessage(json_encode($eventBody), [
+        $message = json_encode($event);
+
+        $msg = new AMQPMessage($message, [
             'content_type' => 'application/json',
             'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT
         ]);
 
-        $channel->basic_publish($message, $exchange, $routingKey);
-
+        $channel->basic_publish($msg, $exchange, $routingKey);
+      
         $channel->close();
         $connection->close();
     }

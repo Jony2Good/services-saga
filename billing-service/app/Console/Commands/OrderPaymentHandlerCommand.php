@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use App\Service\NotificationService;
-use App\Service\StockCommunicationService;
+use App\Service\CommunicationService;
 use Illuminate\Support\Facades\Log;
 
 class OrderPaymentHandlerCommand extends Command
@@ -58,7 +58,7 @@ class OrderPaymentHandlerCommand extends Command
             if ($reply['error'] === false) {
                 Log::info('ответ2', [1 => print_r($reply, true)]);
                 // Отправляем запрос в stock-service
-                StockCommunicationService::handle($reply);
+                CommunicationService::handle($reply, 'OrderStockRequest', 'order.stocked');
             }
 
             // Формируем ответ

@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
 
 class StockService
 {
-    public static function stocked(?array $data)
+    public static function stocked(?array $payload, ?array $data)
     {
-        if (is_null($data)) {
+        if (is_null($payload)) {
             return [
                 'error' => true,
                 'message' => 'Ошибка по таймауту или система не доступна',
@@ -19,11 +19,12 @@ class StockService
             ];
         }
 
-        $orderDishes = collect($data['order_dishes'] ?? '');
-        $orderId = $data['order_id'] ?? '';
+        $sagaId = $data['saga_id'] ?? '';
+        $orderDishes = collect($payload['order_dishes'] ?? '');
+        $orderId = $payload['order_id'] ?? '';
 
-        return DB::transaction(function () use ($orderId, $orderDishes) {
-            $stockOrder = StockOrders::firstOrCreate(['order_id' => $orderId]);
+        return DB::transaction(function () use ($orderId, $orderDishes, $sagaId) {
+            $stockOrder = StockOrders::firstOrCreate(['order_id' => $orderId, 'saga_id' => $sagaId]);
 
             // Удаляем и сохраняем новые записи о заказах и блюдах
             $stockOrder->orderDishes()->delete();
@@ -46,6 +47,7 @@ class StockService
 
                 return [
                     'order_id' => $orderId,
+                    'saga_id' => $sagaId,
                     'error' => true,
                     'message' => 'Недостаточно товаров на складе',
                     'order_status' => OrderStatuses::RESERVE_FAILED->value,
@@ -68,6 +70,7 @@ class StockService
 
             return [
                 'order_id' => $orderId,
+                'saga_id' => $sagaId,
                 'error' => false,
                 'message' => 'Товар зарезервирован',
                 'order_status' => OrderStatuses::RESERVE_SUCCESS->value,
@@ -75,9 +78,9 @@ class StockService
         });
     }
 
-    public static function cancel(?array $data) 
+    public static function cancel(?array $payload) 
     {     
-        if (is_null($data)) {
+        if (is_null($payload)) {
             return [
                 'error' => true,
                 'message' => 'Ошибка по таймауту или система не доступна',
@@ -85,7 +88,7 @@ class StockService
             ];
         }
 
-        $orderId = $data('order_id');
+        $orderId = $payload('order_id');
 
         $stockOrder = StockOrders::where('order_id', $orderId)
             ->where('status', OrderStatuses::RESERVE_SUCCESS->value)
@@ -118,6 +121,7 @@ class StockService
 
         return [
             'order_id' => $orderId,
+            'saga_id' =>  $stockOrder->saga_id,
             'error' => false,
             'message' => 'Резерв успешно отменён',
             'order_status' => OrderStatuses::ABORTED->value,

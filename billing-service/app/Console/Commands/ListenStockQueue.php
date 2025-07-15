@@ -6,7 +6,9 @@ use Illuminate\Console\Command;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Illuminate\Support\Facades\Log;
-use App\Service\OrderStockService;
+use App\Service\BillingSagaService;
+use App\Service\NotificationService;
+use App\Service\CommunicationService;
 
 class ListenStockQueue extends Command
 {
@@ -54,12 +56,24 @@ class ListenStockQueue extends Command
 
                 Log::info("ответ из stock", [1 => print_r($event, true)]);
 
-                match ($event['event']) {
-                    'OrderStockConfirmed' => OrderStockService::stocked($event['data']),
-                    'OrderStockAborted' => 111111,
-                    default => Log::warning("Неизвестное событие из stock: {$event['event']}"),
-                };
+                // Разделить положительный и отрицательный ответ
+                if ($event['event'] === 'OrderStockConfirmed') {
 
+                    $reply = BillingSagaService::stocked($event['data']);
+
+                    Log::error("Ответ из stock-service", [1 => print_r($reply, true)]);
+
+                    NotificationService::notificationMessage($reply);
+
+                    // Отправляем запрос в delivery-service
+                    if ($reply['error'] === false) {
+
+                        Log::info('Что уходит в delivery-service', [1 => print_r($reply, true)]);
+                        
+                        CommunicationService::handle($reply, "OrderDeliveryEvent", "order.delivered");
+                    }
+                }
+               
                 $channel->basic_ack($msg->getDeliveryTag());
             } catch (\Throwable $e) {
                 Log::error('Ошибка обработки stock-события: ' . $e->getMessage());

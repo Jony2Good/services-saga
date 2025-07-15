@@ -5,7 +5,7 @@ services:
       dockerfile: ./docker/nginx/Dockerfile
     container_name: ${APP_NAME}-nginx
     restart: unless-stopped
-    # image: atrem2023/app-nginx:amd64
+    image: atrem2023/app-nginx:amd64
     ports:
       - "${APP_WEB_PORT:-8081}:80"
     volumes:
@@ -25,7 +25,7 @@ services:
       dockerfile: ./docker/php/Dockerfile
     container_name: ${APP_NAME}-php
     restart: unless-stopped
-    image: atrem2023/auth-service:amd64
+    image: atrem2023/auth-service-v2:amd64
     volumes:
       - ./tmp/logs:/var/log
     depends_on:

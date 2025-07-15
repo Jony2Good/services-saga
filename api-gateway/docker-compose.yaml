@@ -1,0 +1,37 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+    container_name: ${APP_NAME}-nginx
+    restart: unless-stopped
+    image: atrem2023/app-nginx:amd64
+    ports:
+      - "${APP_WEB_PORT:-8080}:80"
+    volumes:
+      - ./:${APP_PATH}
+    environment:
+      APP_PATH: ${APP_PATH}
+    depends_on:
+      - php
+    networks:
+      - app
+
+  php:
+    build:
+      args:
+        uid: 1000
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    container_name: ${APP_NAME}-php
+    restart: unless-stopped
+    image: atrem2023/gateway-laravel:amd64
+    volumes:
+      - ./tmp/logs:/var/log   
+    networks:
+      - app
+
+networks:
+  app:
+    external: true
+    name: shared-network

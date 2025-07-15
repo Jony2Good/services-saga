@@ -9,21 +9,21 @@ use Illuminate\Support\Facades\Log;
 use App\Service\OrderCommunicationService;
 use App\Service\BillingCommunicationService;
 
-class BillingCommunicationCommand extends Command
+class ListenDeliveryQueue extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'app:stok-event';
+    protected $signature = 'app:delivery-listen';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Слушаем очередь для получения сообщения из billing-service';
+    protected $description = 'Слушаем очередь для получения сообщения из billing-service об отмене доставки';
 
     /**
      * Execute the console command.
@@ -39,9 +39,9 @@ class BillingCommunicationCommand extends Command
 
         $channel = $connection->channel();
 
-        $queue = 'stock_queue';
+        $queue = 'stock_delivery_queue';
         $exchange = 'events';
-        $routingKey = 'order.stocked';
+        $routingKey = 'order.delivery.aborted';
 
         $channel->exchange_declare($exchange, 'topic', false, true, false);
 
@@ -52,18 +52,9 @@ class BillingCommunicationCommand extends Command
             try {
                 $event = json_decode($msg->getBody(), true);
 
-                Log::info('Запрос из billing-service', [1 => print_r($event, true)]);
+                Log::info('Запрос после отмены доставки', [1 => print_r($event, true)]);
 
-                if ($event['event'] === 'OrderStockRequest') {
-                    // запрашиваем order-service для получения состава заказа
-                    $payload = OrderCommunicationService::handle($event['data']);
-
-                    Log::info('Ответ из order-service', [1 => print_r($payload, true)]);
-                    //направляем ответ в billing-service о резерве товара
-                    BillingCommunicationService::confirmed($payload, $event['data']);
-                }
-
-                if ($event['event'] === 'OrderStockAborted') {
+                if ($event['event'] === 'OrderDeliveryFailed') {                   
                     BillingCommunicationService::aborted($event['data']);
                 }
 

@@ -97,11 +97,11 @@ class BillingSagaService
     }
 
     public static function stocked(?array $data)
-    {
+    {       
         $dataCollection = collect([
-            'order_id' => $data("order_id"),
-            'user_id' => $data("user_id"),
-            'saga_id' => $data("saga_id"),
+            'order_id' => $data["order_id"],
+            'user_id' => $data["user_id"],
+            'saga_id' => $data["saga_id"],
         ]);
 
         $order = OrderStatus::where("order_id", $dataCollection->get("order_id"))->firstOrFail();
@@ -173,11 +173,10 @@ class BillingSagaService
 
     public static function orderDeliveried(?array $data)
     {
-
         $dataCollection = collect([
-            'order_id' => $data("order_id"),
-            'user_id' => $data("user_id"),
-            'saga_id' => $data("saga_id"),
+            'order_id' => $data["order_id"],
+            'user_id' => $data["user_id"],
+            'saga_id' => $data["saga_id"],
         ]);
 
         $order = OrderStatus::where("order_id", $dataCollection->get("order_id"))->firstOrFail();
@@ -201,9 +200,9 @@ class BillingSagaService
     public static function orderDeliveryFailed(?array $data)
     {
         $dataCollection = collect([
-            'order_id' => $data("order_id"),
-            'user_id' => $data("user_id"),
-            'saga_id' => $data("saga_id"),
+            'order_id' => $data["order_id"],
+            'user_id' => $data["user_id"],
+            'saga_id' => $data["saga_id"],
         ]);
 
         $order = OrderStatus::where("order_id", $dataCollection->get("order_id"))->firstOrFail();
@@ -220,6 +219,6 @@ class BillingSagaService
             'order_status' => OrderStatuses::DELIVERY_FAILED->value,
             'error' => false,
             'message' => $data["message"] ?? '',
-        ])->all();  
+        ])->all();
     }
 }

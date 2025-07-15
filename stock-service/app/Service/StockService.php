@@ -22,8 +22,9 @@ class StockService
         $sagaId = $data['saga_id'] ?? '';
         $orderDishes = collect($payload['order_dishes'] ?? '');
         $orderId = $payload['order_id'] ?? '';
+        $userId = $payload['user_id'] ??'';
 
-        return DB::transaction(function () use ($orderId, $orderDishes, $sagaId) {
+        return DB::transaction(function () use ($orderId, $orderDishes, $sagaId, $userId) {
             $stockOrder = StockOrders::firstOrCreate(['order_id' => $orderId, 'saga_id' => $sagaId]);
 
             // Удаляем и сохраняем новые записи о заказах и блюдах
@@ -47,6 +48,7 @@ class StockService
 
                 return [
                     'order_id' => $orderId,
+                    'user_id' => $userId,
                     'saga_id' => $sagaId,
                     'error' => true,
                     'message' => 'Недостаточно товаров на складе',
@@ -70,6 +72,7 @@ class StockService
 
             return [
                 'order_id' => $orderId,
+                'user_id' => $userId,
                 'saga_id' => $sagaId,
                 'error' => false,
                 'message' => 'Товар зарезервирован',
@@ -88,7 +91,8 @@ class StockService
             ];
         }
 
-        $orderId = $payload('order_id');
+        $orderId = $payload['order_id'];
+        $userId = $payload['user_id'] ??'';
 
         $stockOrder = StockOrders::where('order_id', $orderId)
             ->where('status', OrderStatuses::RESERVE_SUCCESS->value)
@@ -97,6 +101,7 @@ class StockService
         if (!$stockOrder) {
             return [
                 'order_id' => $orderId,
+                'user_id' => $userId,
                 'error' => true,
                 'message' => 'Резерв товаров в заказе не найден или уже откатан',
                 'order_status' => OrderStatuses::RESERVE_FAILED->value,
@@ -121,8 +126,9 @@ class StockService
 
         return [
             'order_id' => $orderId,
+            'user_id' => $userId,
             'saga_id' =>  $stockOrder->saga_id,
-            'error' => false,
+            'error' => true,
             'message' => 'Резерв успешно отменён',
             'order_status' => OrderStatuses::ABORTED->value,
         ];

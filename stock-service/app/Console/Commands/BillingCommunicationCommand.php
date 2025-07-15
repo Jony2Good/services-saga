@@ -16,7 +16,7 @@ class BillingCommunicationCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'app:stok-event';
+    protected $signature = 'app:stock-event';
 
     /**
      * The console command description.
@@ -52,13 +52,13 @@ class BillingCommunicationCommand extends Command
             try {
                 $event = json_decode($msg->getBody(), true);
 
-                Log::info('Запрос из billing-service', [1 => print_r($event, true)]);
+                Log::info('Запрос из billing-service', ['reply' => print_r($event, true)]);
 
                 if ($event['event'] === 'OrderStockRequest') {
                     // запрашиваем order-service для получения состава заказа
                     $payload = OrderCommunicationService::handle($event['data']);
 
-                    Log::info('Ответ из order-service', [1 => print_r($payload, true)]);
+                    Log::info('Ответ из order-service', ['reply' => print_r($payload, true)]);
                     //направляем ответ в billing-service о резерве товара
                     BillingCommunicationService::confirmed($payload, $event['data']);
                 }

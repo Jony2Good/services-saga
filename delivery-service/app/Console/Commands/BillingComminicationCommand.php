@@ -58,7 +58,7 @@ class BillingComminicationCommand extends Command
                 if ($event['event'] === 'OrderDeliveryEvent') {
                     $payload = DeliveryService::delivered($event['data']);
 
-                    Log::info('ОТВЕТ billing-service', [1 => print_r($payload, true)]);
+                    Log::info('ОТВЕТ billing-service', ['reply' => print_r($payload, true)]);
 
                     $eventName = $payload['error'] ? 'OrderDeliveryFailed' : 'OrderDeliverySuccess';
                     $routingKeyName = $payload['error'] ? 'order.delivery.failed' : 'order.delivery.success';

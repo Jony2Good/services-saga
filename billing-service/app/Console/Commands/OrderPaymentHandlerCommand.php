@@ -42,8 +42,9 @@ class OrderPaymentHandlerCommand extends Command
         $channel->basic_qos(0, 1, null);
         
         $billingSaga = app(\App\Service\BillingSagaService::class);
+        $command = app(\App\Service\CommunicationService::class);       
 
-        $channel->basic_consume('billing_request', '', false, false, false, false, function ($req) use ($channel, $billingSaga) {
+        $channel->basic_consume('billing_request', '', false, false, false, false, function ($req) use ($channel, $billingSaga, $command) {
             $body = json_decode($req->body, true);
             $totalPrice = (string)$body['total_price'];
             $orderId = $body['order_id'];
@@ -51,14 +52,14 @@ class OrderPaymentHandlerCommand extends Command
 
             $reply = $billingSaga->startOrderSaga($userId, $orderId, $totalPrice);
 
-            Log::info('ответ1', [1 => print_r($reply, true)]);
+            Log::info('ответ1', ['reply' => print_r($reply, true)]);
 
             NotificationService::notificationMessage($reply);
 
             if ($reply['error'] === false) {
-                Log::info('ответ2', [1 => print_r($reply, true)]);
+                Log::info('Отправка запроса в stock-service из billing-service', ['reply' => print_r($reply, true)]);
                 // Отправляем запрос в stock-service
-                CommunicationService::handle($reply, 'OrderStockRequest', 'order.stocked');
+                $command::handle($reply, 'OrderStockRequest', 'order.stocked');
             }
 
             // Формируем ответ

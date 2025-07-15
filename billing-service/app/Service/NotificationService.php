@@ -4,6 +4,7 @@ namespace App\Service;
 
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use Illuminate\Support\Facades\Log;
 
 class NotificationService
 {    
@@ -30,6 +31,8 @@ class NotificationService
         ];
 
         $message = json_encode($event);
+
+         Log::info('Что уходит в delivery-service', ['print' => print_r($message, true)]);
 
         $msg = new AMQPMessage($message, [
             'content_type' => 'application/json',

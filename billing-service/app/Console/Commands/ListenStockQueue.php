@@ -6,9 +6,8 @@ use Illuminate\Console\Command;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use Illuminate\Support\Facades\Log;
-use App\Service\BillingSagaService;
 use App\Service\NotificationService;
-use App\Service\CommunicationService;
+
 
 class ListenStockQueue extends Command
 {
@@ -50,30 +49,34 @@ class ListenStockQueue extends Command
         $channel->queue_bind($queue, $exchange, 'stock.confirmed');
         $channel->queue_bind($queue, $exchange, 'stock.aborted');
 
-        $callback = function (AMQPMessage $msg) use ($channel) {
+        $billingSaga = app(\App\Service\BillingSagaService::class);
+
+        $command = app(\App\Service\CommunicationService::class);
+
+        $callback = function (AMQPMessage $msg) use ($channel, $billingSaga, $command) {
             try {
                 $event = json_decode($msg->getBody(), true);
 
-                Log::info("ответ из stock", [1 => print_r($event, true)]);
+                Log::info("ответ из stock", ['print' => print_r($event, true)]);
 
-                // Разделить положительный и отрицательный ответ
-                if ($event['event'] === 'OrderStockConfirmed') {
+                // Разделить положительный и отрицательный ответ                                 
 
-                    $reply = BillingSagaService::stocked($event['data']);
+                $reply = $billingSaga::stocked($event['data']);
 
-                    Log::error("Ответ из stock-service", [1 => print_r($reply, true)]);
+                Log::info("Обработка ответа в billing-service из склада", ['reply' => print_r($reply, true)]);
 
-                    NotificationService::notificationMessage($reply);
+                // Отправляем запрос в delivery-service
+                if ($reply['error'] === false) {
 
-                    // Отправляем запрос в delivery-service
-                    if ($reply['error'] === false) {
+                    Log::info('Что уходит в delivery-service', ['reply' => print_r($reply, true)]);
 
-                        Log::info('Что уходит в delivery-service', [1 => print_r($reply, true)]);
-                        
-                        CommunicationService::handle($reply, "OrderDeliveryEvent", "order.delivered");
-                    }
+                    $command::handle($reply, "OrderDeliveryEvent", "order.delivered");
                 }
-               
+
+                if ($reply['error']) {
+                    NotificationService::notificationMessage($reply);
+                }
+
                 $channel->basic_ack($msg->getDeliveryTag());
             } catch (\Throwable $e) {
                 Log::error('Ошибка обработки stock-события: ' . $e->getMessage());

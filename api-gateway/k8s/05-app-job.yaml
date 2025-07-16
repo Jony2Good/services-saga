@@ -1,0 +1,13 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gateway-job
+  namespace: k8s-basics
+spec:
+  template:
+    spec:
+      containers:
+        - name: run-update
+          image: atrem2023/gateway-laravel:amd64
+          command: ["bash", "update.sh"]       
+      restartPolicy: OnFailure

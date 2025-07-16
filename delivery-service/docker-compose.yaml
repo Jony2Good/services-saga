@@ -25,7 +25,7 @@ services:
       dockerfile: ./docker/php/Dockerfile
     container_name: ${APP_NAME}-php
     restart: unless-stopped
-    image: atrem2023/order-service-v2:amd64
+    image: atrem2023/delivery-service-v2:amd64
     volumes:
       - ./tmp/logs:/var/log
     depends_on:

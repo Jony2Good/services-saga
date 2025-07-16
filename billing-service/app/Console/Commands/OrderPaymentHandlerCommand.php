@@ -40,21 +40,24 @@ class OrderPaymentHandlerCommand extends Command
         $channel = $connection->channel();
         $channel->queue_declare('billing_request', false, false, false, false);
         $channel->basic_qos(0, 1, null);
-        
+
         $billingSaga = app(\App\Service\BillingSagaService::class);
-        $command = app(\App\Service\CommunicationService::class);       
+        $command = app(\App\Service\CommunicationService::class);
 
         $channel->basic_consume('billing_request', '', false, false, false, false, function ($req) use ($channel, $billingSaga, $command) {
             $body = json_decode($req->body, true);
             $totalPrice = (string)$body['total_price'];
             $orderId = $body['order_id'];
             $userId = $body['user_id'];
+            $iKey = $body['iKey'] ?? null;
 
-            $reply = $billingSaga->startOrderSaga($userId, $orderId, $totalPrice);
+            $reply = $billingSaga->startOrderSaga($userId, $orderId, $totalPrice, $iKey);
 
             Log::info('ответ1', ['reply' => print_r($reply, true)]);
 
-            NotificationService::notificationMessage($reply);
+            if (empty($reply['iKey'])) {
+                NotificationService::notificationMessage($reply);
+            }
 
             if ($reply['error'] === false) {
                 Log::info('Отправка запроса в stock-service из billing-service', ['reply' => print_r($reply, true)]);

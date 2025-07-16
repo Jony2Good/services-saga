@@ -13,7 +13,7 @@ class OrderPaymentController extends Controller
      * Handle the incoming request.
      */
     public function __invoke($id, Request $request, OrderPaymentService $paymentService)
-    {
+    {        
         $userId = $paymentService->getUserIdFromJwt($request);
 
         $order = Order::where('user_id', $userId)
@@ -30,6 +30,7 @@ class OrderPaymentController extends Controller
         $result = $paymentService->payOrder($order, $dto);
 
         return response()->json(array_merge($dto->toArray(), [
+            'iKey' => $request->header('Idempotency-Key'),
             'message' => $result['message'],
             'error' => $result['error'],
             'order_status' => $result['order_status']

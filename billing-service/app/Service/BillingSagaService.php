@@ -16,19 +16,34 @@ use Illuminate\Support\Collection;
 
 class BillingSagaService
 {
-    public function startOrderSaga(int $userId, int $orderId, string $totalPrice)
+    public function startOrderSaga(int $userId, int $orderId, string $totalPrice, ?string $iKey)
     {
-        return DB::transaction(function () use ($userId, $orderId, $totalPrice) {
+        return DB::transaction(function () use ($userId, $orderId, $totalPrice, $iKey) {
 
             $sagaId = Uuid::uuid4()->toString();
-
-            $account = BillingAccount::where('user_id', $userId)->lockForUpdate()->first();
 
             $response = collect([
                 'order_id' => $orderId,
                 'user_id' => $userId,
                 'saga_id' => $sagaId,
             ]);
+
+            if (isset($iKey)) {
+                $order = OrderStatus::where("order_id", $orderId)
+                    ->where('request_key', $iKey)
+                    ->firstOrFail();
+
+                if ($order) {
+                    return $response->merge([
+                        'order_status' => $order->status,
+                        'iKey' => $iKey,
+                        'error' => true,
+                        'message' => 'Указанный в запросе заказ ранее обрабатывался',
+                    ])->all();
+                };
+            }
+
+            $account = BillingAccount::where('user_id', $userId)->lockForUpdate()->first();
 
             if (!$account) {
                 return $response->merge([
@@ -44,6 +59,7 @@ class BillingSagaService
                 'user_id' => $userId,
                 'total_price' => $totalPrice,
                 'saga_id' => $sagaId,
+                'request_key' => $iKey ?? null,
             ]);
 
             // Создаем первую запись для отслеживания saga
@@ -97,7 +113,7 @@ class BillingSagaService
     }
 
     public static function stocked(?array $data)
-    {       
+    {
         $dataCollection = collect([
             'order_id' => $data["order_id"],
             'user_id' => $data["user_id"],
